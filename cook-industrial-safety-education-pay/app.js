@@ -395,11 +395,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     vacResult.innerHTML = `
       <table>
         <tr><th>항목</th><th>금액</th></tr>
-        <tr><td>월임금 (기본급 + 정액급식비)</td><td>${money(monthlyTotal)}</td></tr>
-        <tr><td>일급 (월임금 ÷ 월일수, 10원 단위 절사)</td><td>${money(dailyPay)}</td></tr>
-        <tr><td>시간급 (일급 ÷ 8시간, 10원 단위 절사)</td><td>${money(hourlyPay)}</td></tr>
-        <tr><td>교육시간 임금 (시간급 × ${eduH}시간, 10원 단위 절사)</td><td>${money(eduPay)}</td></tr>
-        <tr><td>최저임금 기준 (최저시급 × ${eduH}시간, 10원 단위 절사)</td><td>${money(minPay)}</td></tr>
+        <tr><td>월임금 (기본급 +정액급식비)</td><td>${money(monthlyTotal)}</td></tr>
+        <tr><td>일급 (월임금 /월일수, 원 단위 절삭)</td><td>${money(dailyPay)}</td></tr>
+        <tr><td>통상임금 (일급 /8시간, 원 단위 절삭)</td><td>${money(hourlyPay)}</td></tr>
+        <tr><td>교육시간 임금 (시간급 *${eduH}시간, 원 단위 절삭)</td><td>${money(eduPay)}</td></tr>
+        <tr><td>최저임금 (최저시급 *${eduH}시간, 원 단위 절삭)</td><td>${money(minPay)}</td></tr>
         <tr><td>최저임금 보전 추가액</td><td>${money(extra)}</td></tr>
         <tr><td class="result-strong">최종 지급액</td><td class="result-strong">${money(finalPay)}</td></tr>
       </table>
@@ -482,3 +482,4 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   resetVacation();
   resetEdu();
 });
+
