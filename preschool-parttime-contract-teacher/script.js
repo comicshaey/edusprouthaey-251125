@@ -108,7 +108,7 @@ function applyAutoAllowances(){
   });
 }
 
-// 기본급·수당 → 시간당 단가
+// 기본급·수당 → 시간당 단가 (여기서는 월액만 주로 사용)
 function buildBasePay(){
   const base8=toNumber($("basePay8")?.value);
   if(!base8)return null;
@@ -153,7 +153,7 @@ function inRange(d,ranges){
   return ranges.some(r=>t>=r.start&&t<=r.end);
 }
 
-// 2단계: 월별 일수
+// 2단계: 월별 일수 (토요일 제외)
 function buildMonthTable(){
   const s=parseDate($("contractStart")?.value);
   const e=parseDate($("contractEnd")?.value);
@@ -167,6 +167,12 @@ function buildMonthTable(){
   const map=new Map();
   let cur=new Date(s.getTime());
   while(cur<=e){
+    // 토요일은 근로일/주휴일 산정에서 제외
+    if(cur.getDay()===6){ // 0:일, 6:토
+      cur.setDate(cur.getDate()+1);
+      continue;
+    }
+
     const ym=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}`;
     if(!map.has(ym))map.set(ym,{sem:0,vac:0,noaf:0});
     const cell=map.get(ym);
@@ -221,6 +227,7 @@ function autoFillAnnualLongevityBySchedule(){
 }
 
 // 3단계: 월별 인건비 + 기관부담 + 퇴직금 + 수당별 합계
+// 일할계산 방식: 월임금 * (근로일+유급주휴일) / (토요일 제외 달력상 월 일수)
 function calcMonthly(){
   const base=buildBasePay();
   const err=$("calcError"),wrap=$("resultWrap");
@@ -240,36 +247,26 @@ function calcMonthly(){
   const R_EMP=0.0175;
   const R_IND=0.00966; // 산재보험 0.966%
 
-  // ----- 기본급 시간당 단가 (항목 분리용) -----
-  const baseSemHour = base.semMonthHours ? base.base4Sem / base.semMonthHours : 0;
-  const baseVacHour = base.vacMonthHours ? base.base8Vac / base.vacMonthHours : 0;
-
-  // ----- 수당별 합계용 사전 준비 -----
+  // ----- 수당별 합계용 사전 준비 (월액 기준) -----
   const allowanceDefs=[];
-  const semMonthHours=base.semMonthHours;
-  const vacMonthHours=base.vacMonthHours;
-
   document.querySelectorAll(".allowance-row").forEach(row=>{
     const name=(row.querySelector(".allow-name")?.value||"").trim();
     if(!name)return;
-    const semBase=toNumber(row.querySelector(".allow-semester")?.value);
-    const vacBase=toNumber(row.querySelector(".allow-vacation")?.value);
+    const semBase=toNumber(row.querySelector(".allow-semester")?.value); // 4시간 기준 월액
+    const vacBase=toNumber(row.querySelector(".allow-vacation")?.value); // 8시간 기준 월액
     if(!semBase && !vacBase)return;
-
-    const semHour=semMonthHours?semBase/semMonthHours:0;
-    const vacHour=vacMonthHours?vacBase/vacMonthHours:0;
 
     allowanceDefs.push({
       name,
       semBase,
       vacBase,
-      semHour,
-      vacHour,
       total:0
     });
   });
 
   let totalW=0,totalA=0,totalINS=0,totalDays=0;
+
+  // 연 단위 수당 총액 → 월별 균등 배분
   let annualTotal=0;
   document.querySelectorAll(".annual-row").forEach(r=>{
     annualTotal+=toNumber(r.querySelector(".annual-amount")?.value);
@@ -278,43 +275,61 @@ function calcMonthly(){
   const perMonthAnnual=floorTo10(monthCount?annualTotal/monthCount:0);
 
   let rowsHtml="";
+
   monthRows.forEach(r=>{
     const ym=r.getAttribute("data-month")||"";
-    const sem=toNumber(r.querySelector(".sem-days")?.value);
-    const vac=toNumber(r.querySelector(".vac-days")?.value);
-    const noaf=toNumber(r.querySelector(".noaf-days")?.value);
-    const daySum=sem+vac+noaf;
-    totalDays+=daySum;
+    const sem=toNumber(r.querySelector(".sem-days")?.value);   // 학기중(4h)
+    const vac=toNumber(r.querySelector(".vac-days")?.value);   // 방학(8h)
+    const noaf=toNumber(r.querySelector(".noaf-days")?.value); // 미운영(4h)
 
-    // ----- 월별 기본급 + 수당 별도 산출 -----
+    const work4 = sem + noaf; // 4시간 기준 근로일+주휴
+    const work8 = vac;        // 8시간 기준 근로일+주휴
+
+    const monthWorkDays = work4 + work8;
+    totalDays += monthWorkDays;
+
+    // 토요일 제외 달력상 월 일수 계산
+    let denDays = 0;
+    if(ym){
+      const [yStr,mStr] = ym.split("-");
+      const y = Number(yStr);
+      const m = Number(mStr); // 1~12
+      if(Number.isFinite(y) && Number.isFinite(m)){
+        const lastDay = new Date(y, m, 0).getDate(); // 그 달 마지막 날짜
+        for(let d=1; d<=lastDay; d++){
+          const dt = new Date(y, m-1, d);
+          if(dt.getDay()===6) continue; // 토요일 제외
+          denDays++;
+        }
+      }
+    }
+    if(denDays<=0){
+      // 분모가 없으면 그냥 0 처리
+      return;
+    }
+
     let wage=0;
     const detailLines=[];
 
-    // 기본급
-    let baseAmt=0;
-    if(vac===0 && noaf===0 && sem>0){
-      // 학기중만 있는 달 → 학기중 4시간 기준 월급 전액
-      baseAmt = floorTo10(base.base4Sem);
-    }else{
-      const partSem = baseSemHour * (sem+noaf) * 4;
-      const partVac = baseVacHour * vac * 8;
-      baseAmt = floorTo10(partSem + partVac);
+    // ---- 기본급 일할계산 ----
+    let baseAmt = 0;
+    if(monthWorkDays>0){
+      baseAmt = floorTo10(
+        (base.base4Sem * work4 + base.base8Vac * work8) / denDays
+      );
     }
     if(baseAmt>0){
       wage += baseAmt;
       detailLines.push(`기본급: ${formatWon(baseAmt)}`);
     }
 
-    // 수당별
+    // ---- 수당별 일할계산 ----
     allowanceDefs.forEach(a=>{
-      let amt=0;
-      if(vac===0 && noaf===0 && sem>0){
-        // 학기중만 있는 달 → 학기중 수당 월액 전액
-        amt = a.semBase;
-      }else{
-        const partSem = a.semHour * (sem+noaf) * 4;
-        const partVac = a.vacHour * vac * 8;
-        amt = floorTo10(partSem + partVac);
+      let amt = 0;
+      if(monthWorkDays>0){
+        amt = floorTo10(
+          (a.semBase * work4 + a.vacBase * work8) / denDays
+        );
       }
       if(amt>0){
         wage += amt;
@@ -323,10 +338,11 @@ function calcMonthly(){
       }
     });
 
-    // 연 단위 분배 및 기관부담
+    // 연 단위 분배(정근수당·명절휴가비·정기상여금 등)
     totalW+=wage;
     totalA+=perMonthAnnual;
 
+    // 기관부담금
     const orgP=wage*R_PEN;
     const orgH=wage*R_HEAL;
     const orgL=wage*R_LTC;
@@ -354,7 +370,7 @@ function calcMonthly(){
 
   const totalIncome=totalW+totalA;
 
-  // 월별 인건비/기관부담 테이블 (기본급·수당 내역 열 추가)
+  // 월별 인건비/기관부담 테이블
   wrap.innerHTML=`
   <div class="table-wrap">
     <table>
@@ -385,7 +401,8 @@ function calcMonthly(){
     </table>
   </div>
   <p class="hint">
-    ·기관부담금 산재보험(0.966%)임. 개발자 근무 학교 기준.
+    ·기관부담금 산재보험(0.966%)임. 개발자 근무 학교 기준.<br/>
+    ·일할계산: 각 항목 월액 × (근로일+유급주휴일) ÷ (토요일 제외 달력상 월 일수)
   </p>`;
 
   // ----- 수당별 기준 월액 & 계약기간 총 지급액 요약 -----
@@ -423,7 +440,7 @@ function calcMonthly(){
     </p>`;
   }
 
-  // 퇴직금 (1년 이상)
+  // 퇴직금 (1년 이상) – totalDays는 근로일+주휴(토요일 제외) 합계로 사용
   const s=parseDate($("contractStart")?.value);
   const e=parseDate($("contractEnd")?.value);
   if(s&&e){
@@ -436,7 +453,7 @@ function calcMonthly(){
         <h3 style="margin-top:0;font-size:15px;">퇴직금 대충 산정 (계속근로 1년 이상)</h3>
         <p class="hint">
           ·계약기간 달력일수: ${days}일 기준<br/>
-          ·계약기간 전체 임금을 달력일수로 나눈 1일 평균임금 *30일. 원단위 절삭
+          ·계약기간 전체 임금을 근로일수로 나눈 1일 평균임금(근로일+주휴 기준) *30일. 원단위 절삭
         </p>
         <p><b>예상 퇴직금(개략): ${formatWon(retire)}</b></p>
       </div>`;
