@@ -6,32 +6,48 @@
   <title>방학중 비상시근로자 방학근무 인건비 계산기 (주휴수당)</title>
   <link rel="stylesheet" href="/static/style.css" />
 
-
+  <!-- 이 페이지 전용 결과 레이아웃 -->
   <style>
     .result-grid{
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:16px;
     }
-    .result-item{
-      display:flex;
-      align-items:baseline;
-      gap:8px;
-      flex-wrap:wrap;
+    .result-block{
+      border-top:1px solid #eee;
+      padding-top:10px;
+      margin-top:4px;
     }
-    .result-item-wide{
+    .result-block:first-of-type{
+      border-top:none;
+      padding-top:0;
+    }
+    .result-title{
+      font-weight:700;
+      margin-bottom:4px;
+    }
+    .result-row{
       display:flex;
+      justify-content:space-between;
       align-items:baseline;
-      gap:8px;
-      flex-wrap:wrap;
+      gap:12px;
+      margin:2px 0;
     }
     .result-label{
-      font-weight:700;
-      min-width:200px;
+      font-weight:600;
     }
-    .result-value,
+    .result-value{
+      min-width:120px;
+      text-align:right;
+    }
+    .result-help{
+      font-size:0.85rem;
+      color:#555;
+      margin-top:2px;
+    }
     .result-total{
-      margin-left:auto;
+      font-size:1.1rem;
+      font-weight:700;
       text-align:right;
     }
   </style>
@@ -40,7 +56,6 @@
 
   <main class="container" style="max-width:880px; margin:0 auto; padding:24px 16px;">
 
-    
   <header class="site-header">
     <div class="shell">
       <h1>조리종사원 및 청소원 방학근무 인건비 일할 계산기</h1>
@@ -51,7 +66,6 @@
       </p>
     </div>
   </header>
-
 
     <!-- ================================ 구분선 ================================ -->
 
@@ -66,7 +80,9 @@
         6. 쨔쟌~      
       </p>
 
-      아이씨 귀찮아 계산 결과 나중에 고치겠음
+      아이씨 귀찮아 계산 결과 나중에 고치겠음 <br/>
+      아니다, 고쳤음<br/>
+      
     </section>
 
 <!-- ================================ 구분선 ================================ -->
@@ -85,8 +101,6 @@
         </select>
       </div>
     </section>
-
-    
 
     <section class="card">
       <!-- 근무 기간 -->
@@ -125,11 +139,9 @@
     <section class="card">
       <h2> 월별 인건비 계산 </h2>
       
-      
       <p class="muted">
-        ·입력하면 방학기간 동안의 날짜가 쭉 생성됨. 근무일자에만 체크하면 됨.
+        ·입력하면 방학기간 동안의 날짜가 쭉 생성됨. 근무일자에만 체크하면 됨.<br/>
         ·월별 토요일 일수가 달라서 복잡함.
-        
       </p>
 
       <div class="table-wrap" id="monthConfigContainer">
@@ -162,78 +174,87 @@
       </p>
 
       <div class="result-grid">
-        <div class="result-item">
-          <div class="result-label">총 실근무일수</div>
-          <div class="result-value" id="workingDaysText">-</div>
-        </div>
+        <!-- 1) 기본 근무 현황 -->
+        <div class="result-block">
+          <div class="result-title">기본 근무 현황</div>
 
-        <div class="result-item">
-          <div class="result-label">주간 실근로시간</div>
-          <div class="result-value" id="weeklyHoursText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">주당 근로시간 설명</div>
-          <div class="result-value" id="weeklyHoursHintText">
+          <div class="result-row">
+            <div class="result-label">총 실근무일수</div>
+            <div class="result-value" id="workingDaysText">-</div>
+          </div>
+
+          <div class="result-row">
+            <div class="result-label">주간 실근로시간</div>
+            <div class="result-value" id="weeklyHoursText">-</div>
+          </div>
+
+          <p class="result-help" id="weeklyHoursHintText">
             주휴수당 지급 요건 참고: 주당 15시간 이상 근무 시 지급
-          </div>
+          </p>
         </div>
 
-        <div class="result-item">
-          <div class="result-label">방학중 근무수당 (조리종사원) 1일 기준</div>
-          <div class="result-value" id="restPerDayText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">방학중 근무수당 합계 (조리종사원)</div>
-          <div class="result-value" id="restTotalText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">방학중 근무수당 산정 기준 설명</div>
-          <div class="result-value" id="restRuleText">
+        <!-- 2) 조리종사원 기준 -->
+        <div class="result-block" id="cookResultBlock">
+          <div class="result-title">조리종사원 기준</div>
+
+          <div class="result-row">
+            <div class="result-label">방학중 근무수당 (조리종사원) 1일 기준</div>
+            <div class="result-value" id="restPerDayText">-</div>
+          </div>
+
+          <div class="result-row">
+            <div class="result-label">방학중 근무수당 합계 (조리종사원)</div>
+            <div class="result-value" id="restTotalText">-</div>
+          </div>
+
+          <p class="result-help" id="restRuleText">
             4시간 이하 1만원, 4시간 초과 2만원
-          </div>
-        </div>
+          </p>
 
-        <div class="result-item">
-          <div class="result-label">월간 유급 주휴일수 (조리종사원)</div>
-          <div class="result-value" id="holidayDaysText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">주휴수당 요건 설명</div>
-          <div class="result-value" id="holidayCondText">
+          <div class="result-row">
+            <div class="result-label">월간 유급 주휴일수 (조리종사원)</div>
+            <div class="result-value" id="holidayDaysText">-</div>
+          </div>
+
+          <div class="result-row">
+            <div class="result-label">주휴수당 1일 기준액 (조리종사원)</div>
+            <div class="result-value" id="holidayPerDayText">-</div>
+          </div>
+
+          <div class="result-row">
+            <div class="result-label">주휴수당 합계 (조리종사원)</div>
+            <div class="result-value" id="holidayTotalText">-</div>
+          </div>
+
+          <p class="result-help" id="holidayCondText">
             주휴수당 지급 요건 참고용
-          </div>
-        </div>
-
-        <div class="result-item">
-          <div class="result-label">주휴수당 1일 기준액 (조리종사원)</div>
-          <div class="result-value" id="holidayPerDayText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">주휴수당 산정 기준 설명</div>
-          <div class="result-value" id="holidayHintText">
+          </p>
+          <p class="result-help" id="holidayHintText">
             여러달 걸쳐있으면 월별 주휴수당 각각 산출 결과 보여드림
+          </p>
+        </div>
+
+        <!-- 3) 청소원 기준 -->
+        <div class="result-block" id="cleanerResultBlock">
+          <div class="result-title">청소원 기준</div>
+
+          <div class="result-row">
+            <div class="result-label">일할계산 인건비 (청소원)</div>
+            <div class="result-value" id="prorataText">-</div>
           </div>
-        </div>
 
-        <div class="result-item">
-          <div class="result-label">주휴수당 합계 (조리종사원)</div>
-          <div class="result-value" id="holidayTotalText">-</div>
-        </div>
-
-        <div class="result-item">
-          <div class="result-label">일할계산 인건비 (청소원)</div>
-          <div class="result-value" id="prorataText">-</div>
-        </div>
-        <div class="result-item">
-          <div class="result-label">청소원 인건비 산정 기준 설명</div>
-          <div class="result-value" id="prorataHintText">
+          <p class="result-help" id="prorataHintText">
             특수운영직군 청소원 선택 시에만 여기에 나옴
-          </div>
+          </p>
         </div>
 
-        <div class="result-item result-item-wide">
-          <div class="result-label">총 인건비</div>
-          <div class="result-total" id="grandTotalText">-</div>
+        <!-- 4) 총 인건비 -->
+        <div class="result-block">
+          <div class="result-title">합계</div>
+          <div class="result-row">
+            <div class="result-label">총 인건비</div>
+            <div class="result-total" id="grandTotalText">-</div>
+          </div>
         </div>
       </div>
 
