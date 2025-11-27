@@ -234,14 +234,14 @@
           </label>
         </div>
         <div class="hint">
-          둘 중 하나 고르세요
+          입력 방식은 한 번에 하나만 사용됩니다. (모드를 바꾸면 직접 다시 확인·수정해 주세요)
         </div>
       </div>
 
       <!-- 요일별 소정 근로시간 -->
       <div class="field-row">
         <label>
-          소정 근로시간 (요일별 입력)
+          요일별 소정 근로시간
           <span style="font-weight:500;">· 기본값: 월~금 4시간</span>
         </label>
 
@@ -381,7 +381,8 @@
         </div>
 
         <div class="hint">
-          체크 해제 시 근무하지 않는 것으로 간주, 휴게시간은 일괄 차감됨
+          체크 해제 시 해당 요일은 근무하지 않는 것으로 처리됩니다.
+          휴게시간은 아래 옵션으로 일괄 차감합니다.
         </div>
       </div>
 
@@ -403,7 +404,7 @@
           </label>
         </div>
         <div class="hint">
-          예: 하루 4시간 근로, 휴게 30분일 경우, 실근무시간 3.5시간으로 계산.
+          예: 하루 4시간 근로, 휴게 30분 → 유급시간 3.5시간으로 계산.
         </div>
       </div>
 
@@ -415,16 +416,16 @@
           placeholder="예: 2025-01-27, 2025-02-10&#10;쉼표(,) 또는 줄바꿈으로 여러 날짜 입력"
         ></textarea>
         <div class="hint">
-          양력 공휴일을 제외한 다른 휴일들은 수기 입력.
+          학교 행사, 기관 사정 등으로 근로하지 않는 날을 직접 입력합니다.
         </div>
 
         <div style="margin-top:8px;">
           <label style="font-weight:400; display:flex; align-items:center; gap:6px;">
             <input type="checkbox" id="autoHoliday" checked />
-            <span>공휴일 자동 반영 여부 (음력은 구현 못했음)</span>
+            <span>대한민국 관공서 공휴일 자동 반영 (현재 2025년 기준)</span>
           </label>
           <div class="hint">
-            설·추석, 삼일절, 어린이날, 현충일, 광복절, 개천절, 한글날, 성탄절 등 양력 공휴일을 자동으로 제외함. 
+            설·추석, 삼일절, 어린이날, 현충일, 광복절, 개천절, 한글날, 성탄절 등은 별도 입력 없이 제외일로 처리됩니다.
           </div>
         </div>
       </div>
@@ -447,8 +448,8 @@
       <div class="result-box">
         <div id="outDaysLine" style="margin-bottom:8px; font-weight:600; color:#333;"></div>
 
-        <div>주 소정 근무시간 합계 (휴게시간 적용 전): <span id="outWeeklyRaw">0</span> 시간</div>
-        <div>주 소정 근무시간 합계 (실근무시간): <span id="outWeeklyPaid">0</span> 시간</div>
+        <div>주 소정 근무시간 합계 (휴게 전): <span id="outWeeklyRaw">0</span> 시간</div>
+        <div>주 소정 근무시간 합계 (유급 기준): <span id="outWeeklyPaid">0</span> 시간</div>
 
         <hr />
 
@@ -457,7 +458,7 @@
 
         <hr />
 
-        <div>총 지급액 (기본급+주휴수당): <span id="outTotal">0</span> 원</div>
+        <div>총 지급액(기본급+주휴수당): <span id="outTotal">0</span> 원</div>
 
         <div style="margin-top:8px;">
           기본급 예산 잔액: <span id="outRemainBase">0</span> 원<br />
@@ -466,7 +467,7 @@
 
         <div id="outMsg" style="color:#555; font-size:0.9rem; margin-top:6px;"></div>
       </div>
-      
+
       <div style="text-align:center;">
         <a href="/" class="btn-home">메인으로 돌아가기</a>
       </div>
@@ -475,9 +476,6 @@
 <footer style="text-align:center; margin-top:15px; color:#444;">
   제작자: 씩씩하고 귀여운 고주무관 · Contact: edusproutcomics@naver.com · 개인적인 토이 프로젝트입니다.
 </footer>
-
-    
   </main>
 </body>
 </html>
-
