@@ -197,38 +197,45 @@
       <a class="btn" href="/">메인으로 돌아가기</a>
     </div>
 
-    <!-- 꼬리말 -->
     <footer>
       제작자: 씩씩하고 귀여운 고주무관 · Contact: edusproutcomics@naver.com · 개인적인 토이 프로젝트입니다.
     </footer>
   </div>
 
   <script>
+    // ---------------- 기본 파라미터 처리 ----------------
     const q = new URLSearchParams(location.search);
     const START_YM = q.get('start') || '2025-03';
     const COUNT    = Math.max(1, Math.min(36, parseInt(q.get('months')||'12',10)));
     const CUSTOM_TITLE = q.get('title') || '';
-
-    document.getElementById("startYmInput").value = START_YM;
-    document.getElementById("countInput").value = COUNT;
-
 
     let NOTES = {}; // JSON에서 불러와서 채움
 
     const root = document.getElementById('root');
     const rangeText = document.getElementById('rangeText');
     const h1 = document.getElementById('title');
-    if(CUSTOM_TITLE) h1.textContent = CUSTOM_TITLE;
+    if (CUSTOM_TITLE) h1.textContent = CUSTOM_TITLE;
+
+    const startYmInput = document.getElementById("startYmInput");
+    const countInput = document.getElementById("countInput");
+    const applyBtn = document.getElementById("applyBtn");
+
+    // URL 파라미터 기준으로 입력칸 초기값 세팅
+    startYmInput.value = START_YM;
+    countInput.value = COUNT;
 
     const pad = n => (n<10?'0':'')+n;
     const ymd = (y,m,d) => `${y}-${pad(m)}-${pad(d)}`;
-    const ymToDate = ym => { const [y,m]=ym.split('-').map(Number); return new Date(y, m-1, 1); };
+    const ymToDate = ym => {
+      const [y,m] = ym.split('-').map(Number);
+      return new Date(y, m-1, 1);
+    };
     const addMonths = (d,n) => new Date(d.getFullYear(), d.getMonth()+n, 1);
     // notes에 HTML 태그를 그대로 쓰기 위해 이스케이프는 하지 않고 그대로 반환
     const escapeHtml = s => s || '';
     const wdK = w => ['일','월','화','수','목','금','토'][w];
 
-    // 범위 텍스트
+    // ---------------- 상단 범위 텍스트 ----------------
     function setRangeText(){
       const start = ymToDate(START_YM);
       const end = addMonths(start, COUNT-1);
@@ -237,7 +244,7 @@
         `${end.getFullYear()}년 ${end.getMonth()+1}월`;
     }
 
-    // 월 렌더링
+    // ---------------- 월 렌더링 ----------------
     function renderMonth(y,m){
       const first = new Date(y, m-1, 1);
       const startWd = first.getDay(); // 0=일
@@ -324,8 +331,7 @@
       }
     }
 
-    // ==== 6개월 단위 JSON 관리 ====
-
+    // ---------------- 6개월 단위 JSON 관리 ----------------
     function getHalfKeyByDate(date){
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
@@ -370,6 +376,21 @@
       }));
     }
 
+    // ---------------- 적용 버튼 동작 ----------------
+    applyBtn.addEventListener("click", () => {
+      const ym = startYmInput.value;
+      const cnt = parseInt(countInput.value, 10) || 1;
+      if (!ym) return;
+
+      const params = new URLSearchParams();
+      params.set("start", ym);
+      params.set("months", cnt.toString());
+      if (CUSTOM_TITLE) params.set("title", CUSTOM_TITLE);
+
+      location.search = params.toString();
+    });
+
+    // ---------------- 초기 실행 ----------------
     (async function init(){
       const halfKeys = collectHalfKeysForMonthly(START_YM, COUNT);
       const files = halfKeys.map(key => `notes/notes-${key}.json`);
