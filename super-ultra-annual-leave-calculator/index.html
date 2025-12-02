@@ -180,6 +180,14 @@
       border-top:1px solid var(--line);
       margin:12px 0;
     }
+    details{
+      margin-top:6px;
+      font-size:0.8rem;
+    }
+    details summary{
+      cursor:pointer;
+      font-weight:600;
+    }
     @media (max-width:600px){
       .result-label{min-width:140px;}
     }
@@ -190,12 +198,12 @@
     <header>
       <h1>연차·미사용수당 슈퍼 울트라 계산기 (정적)</h1>
       <p class="sub">
-        <b>근로기준법 + 단체협약 + 지침</b>을 염두에 두고 설계한 정적 페이지용 엔진입니다.<br>
-        규정 세트를 선택하면, 해당 프로필의 <b>연차 부여 규칙 · 회계연도 기준 · 절사규칙</b> 등을 반영해서
-        <b>연차일수 · 미사용수당</b>을 계산합니다.<br>
+        <b>근로기준법 + 단체협약 + 통상임금 지침</b>을 염두에 두고 설계한 정적 페이지용 엔진입니다.<br>
+        규정 세트를 선택하면, 해당 프로필의 <b>회계연도 기준 · 연차 부여 규칙 · 절사 규칙</b> 등을 반영해서
+        <b>연차일수 · 미사용수당</b>을 계산하는 틀입니다.<br>
         <span class="small">
-          ※ 이 코드는 구조를 만든 예시이며, 실제 단체협약·지침 숫자는 반드시 직접 확인 후
-          <code>RULE_PROFILES</code> 상단 설정을 수정해야 합니다.
+          ※ 실제 단체협약·지침 내용은 상단 JavaScript의 <code>RULE_PROFILES</code>에서
+          숫자와 설명을 직접 채워넣어야 합니다. (지금은 “예시 값”으로만 넣어둔 상태)
         </span>
       </p>
     </header>
@@ -211,7 +219,9 @@
           </label>
           <select id="ruleProfile" onchange="onProfileChange()">
             <option value="law_basic">[법정 기본형] 근로기준법 단순 버전</option>
-            <option value="gw_edu_example">[예시] 강원 교육공무직 단협형(샘플)</option>
+            <option value="gw_school_cba">[예시] 강원 교육공무직 학교근무자 단협(학년도 기준)</option>
+            <option value="gw_institute_cba">[예시] 강원 교육공무직 기관근무자 단협(회계연도 기준)</option>
+            <option value="gw_wage_guideline">[예시] 통상임금 노사지도 지침 반영형(단가만 직접입력)</option>
             <option value="custom">[커스텀] 내가 직접 규정 적용</option>
           </select>
         </div>
@@ -224,7 +234,7 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>절사·반올림 규칙</label>
+          <label>연차·수당 절사 규칙</label>
           <div id="profileRoundingView" class="small muted">
             규정 세트를 선택하면 자동 표시됩니다.
           </div>
@@ -236,6 +246,12 @@
           </div>
         </div>
       </div>
+      <details>
+        <summary>※ 이 프로필이 어떤 문서를 기준으로 하는지 메모</summary>
+        <div id="profileDocsView" class="small muted">
+          규정 세트를 선택하면 “단체협약/지침 출처 메모”가 표시됩니다.
+        </div>
+      </details>
     </section>
 
     <!-- 1. 기본 정보 -->
@@ -268,6 +284,7 @@
             <option value="행정실무사">행정실무사</option>
             <option value="사서">사서</option>
             <option value="돌봄전담사">돌봄전담사</option>
+            <option value="기관근무자">기관근무자</option>
             <option value="기타">기타(직접입력)</option>
           </select>
         </div>
@@ -282,6 +299,7 @@
           <select id="workType">
             <option value="상시">상시근로자</option>
             <option value="비상시">방학중 비상시근로자</option>
+            <option value="단시간">단시간 근로자</option>
           </select>
         </div>
         <div class="field">
@@ -299,8 +317,9 @@
       <h2>2. 출근율 / 월별 개근 정보</h2>
       <p class="small">
         해당 연도 1년치 <b>소정근로일수 / 실제 근로일수</b>를 월별로 입력하면
-        <b>연간 출근율</b>과 <b>월 개근 개월수</b>를 자동 계산합니다.
-        (나이스·근무상황부 그대로 옮겨 적는 용도)
+        <b>연간 출근율</b>과 <b>월 개근 개월수</b>를 자동 계산합니다.<br>
+        - 소정근로일수 입력 시: 근로자의 날·주휴일·관공서 공휴일(대체공휴일)은 원래 쉬는 날이므로 제외하고,
+        재량휴업일은 학기 초에 정한 약정휴일(연간 7일 한도)까지만 제외하는 걸 전제로 합니다.:contentReference[oaicite:1]{index=1}
       </p>
       <div style="overflow-x:auto;">
         <table>
@@ -347,7 +366,7 @@
         선택한 <b>규정 세트</b>에 따라 <b>추천 부여연차일수</b>를 계산하고,
         실제 부여일수는 필요시 직접 수정할 수 있습니다.<br>
         단체협약·지침을 그대로 반영하려면 상단의 <code>RULE_PROFILES</code>에서
-        각 프로필의 <b>grantRules</b>를 수정하세요.
+        각 프로필의 <b>grantType / grantRules</b>를 실제 조항에 맞게 수정하세요.
       </p>
 
       <div class="row">
@@ -389,10 +408,10 @@
     <section class="card">
       <h2>4. 임금 정보</h2>
       <p class="small">
-        미사용 연차수당 계산을 위해 <b>통상임금(시급/월급 등)</b>을 입력합니다.<br>
-        규정 세트별로 어떤 수당을 포함할지, 어떤 단가를 쓸지는
-        나중에 백엔드·DB 버전에서 더 정교하게 가져가는 걸 전제로,
-        여기서는 <b>단가만 직접 입력</b>하는 구조로 두었습니다.
+        미사용 연차수당 계산을 위해 <b>통상임금(시급/일급/월급)</b>을 입력합니다.<br>
+        통상임금 지침에서 말하는 “포함 수당/제외 수당”은
+        이 계산기에서는 이미 정리된 단가라고 가정하고, 여기서는 <b>숫자만 넣는 구조</b>입니다.
+        (실제 포함 범위는 통상임금 지침·보수표를 보고 정리)
       </p>
       <div class="row">
         <div class="field">
@@ -497,63 +516,153 @@
       <p class="small">
         - 상단 스크립트의 <code>RULE_PROFILES</code>에 규정 세트를 추가/수정하면,
           같은 엔진으로 <b>여러 기관·연도·직종</b>을 돌릴 수 있게 설계되어 있습니다.<br>
-        - 예: <code>gw_edu_example</code>를 복사해서
-          <code>gw_edu_2026_cba</code>, <code>gangwon_school_2027</code> 등으로 파생.<br>
+        - 예: <code>gw_school_cba</code>를 복사해서
+          <code>gw_school_cba_2026</code>, <code>gw_institute_cba_2027</code> 등으로 파생.<br>
         - 실제 단체협약 조항(예: 출근율 구간별 연차일수, 근속연수 가산일수, 절사 규칙 등)은
-          지침·협약 원문을 보면서 <b>grantRules / rounding</b> 부분만 수정하면 됩니다.
+          지침·협약 원문을 보면서 <b>grantType / grantRules / rounding</b> 부분만 수정하면 됩니다.
       </p>
     </section>
   </div>
 
   <script>
-    // -------------------------------
-    // 0. 규정 세트 정의
-    // -------------------------------
-    // 여기 RULE_PROFILES 안에 실제 단체협약·지침 내용을 옮겨 적는 구조.
-    // 지금은 "법정 기본형", "강원 교육공무직 예시", "커스텀" 3개만 넣어둠.
+    // -----------------------------------
+    // 0. 규정 세트 정의 (슈퍼 울트라 코어)
+    // -----------------------------------
+    // 실제 로직은 RULE_PROFILES 안에서만 손대면 되도록 구조화.
+    // daysRounding: 연차 "일수" 소수점 처리용 (필요시 사용)
+    // moneyRounding: 수당 "금액" 절사/반올림 처리용
     const RULE_PROFILES = {
+      // 1) 근로기준법 기본형
       law_basic:{
         id:"law_basic",
         name:"[법정 기본형] 근로기준법 단순 버전",
-        // 회계연도 기준: 1월 1일형 / 3월 1일형 등 표시용
         yearBase:"JAN",
         yearBaseLabel:"1월 1일 기준 (일반 근로기준법형)",
-        // 연차 부여 규칙
-        // type: engine에 어떤 로직을 쓸지 표시
-        grantType:"law_basic", 
-        // 절사 규칙: 원단위 그대로
-        rounding:{
-          step:1,          // 1원이면 절사 없음
-          mode:"none",     // none / floor / round / ceil
+        grantType:"law_basic",
+        daysRounding:{
+          step:0.5,
+          mode:"floor",
+          label:"0.5일 단위 버림(예시)"
+        },
+        moneyRounding:{
+          step:1,
+          mode:"none",
           label:"원단위 (절사 없음)"
         },
-        desc:"근로기준법 일반 규칙을 단순화한 예시입니다. 실제 기관·단협과 다를 수 있습니다."
+        docs:[
+          "근로기준법 제60조(연차유급휴가) 1년 미만 월 1일, 1년 이상 15일 + 가산",
+          "출근율 80% 미만 시 개근월수 기준 산정 등"
+        ],
+        desc:"1년 미만은 월 개근 1일(최대 11일), 1년 이상은 출근율 80% 이상이면 15일 + 가산, 80% 미만이면 개근월수로 계산하는 기본형 예시입니다."
       },
-      gw_edu_example:{
-        id:"gw_edu_example",
-        name:"[예시] 강원 교육공무직 단협형(샘플)",
+
+      // 2) 강원 교육공무직 학교근무자 단협 예시
+      gw_school_cba:{
+        id:"gw_school_cba",
+        name:"[예시] 강원 교육공무직 학교근무자 단협(학년도 기준)",
         yearBase:"MAR",
-        yearBaseLabel:"3월 1일 기준 (학교 학년도형 예시)",
-        grantType:"gw_cba_like", // 강원 교육공무직 단협 비슷한 느낌의 샘플
-        rounding:{
+        yearBaseLabel:"3월 1일 기준 (학교 학년도형)",
+        grantType:"gw_cba_school",
+        daysRounding:{
+          step:0.5,
+          mode:"floor",
+          label:"0.5일 단위 버림(예시)"
+        },
+        moneyRounding:{
+          step:10,
+          mode:"floor",
+          label:"10원 단위 버림 (예시: 회계상 처리 편의를 위한 버림)"
+        },
+        docs:[
+          "강원도교육청-전국학교비정규직연대회의 단체협약(2022) 연차유급휴가 조항",
+          "교육공무직 복무의 이해 자료(연차·휴일 파트)",
+          "교육공무직 업무편람(연차유급휴가 부분)"
+        ],
+        // 여기 안에 실제 단협 숫자(연차일수, 가산 구조 등)를 나중에 넣으면 됨
+        grantRules:{
+          firstYearMax:11,
+          // 예시: 1년 이상 출근율 80% 이상이면 26일 고정 같은 구조
+          // 실제 협약에 맞게 수정 필요
+          defaultDaysAfter1Y:26
+        },
+        desc:"학교근무 상시근로자(학년도 기준)용 예시 프로필입니다. 실제 연차일수·출근율 조건은 단체협약 원문에 맞게 grantRules를 수정해야 합니다."
+      },
+
+      // 3) 강원 교육공무직 기관근무자 단협 예시
+      gw_institute_cba:{
+        id:"gw_institute_cba",
+        name:"[예시] 강원 교육공무직 기관근무자 단협(회계연도 기준)",
+        yearBase:"JAN",
+        yearBaseLabel:"1월 1일 기준 (기관 회계연도형)",
+        grantType:"gw_cba_institute",
+        daysRounding:{
+          step:0.5,
+          mode:"floor",
+          label:"0.5일 단위 버림(예시)"
+        },
+        moneyRounding:{
           step:10,
           mode:"floor",
           label:"10원 단위 버림 (예시)"
         },
-        desc:"강원도교육청 교육공무직 단체협약을 흉내낸 샘플 로직입니다. 실제 조항·연차일수·절사 규칙은 반드시 협약 원문을 보고 수정해야 합니다."
+        docs:[
+          "강원도교육청-전국학교비정규직연대회의 단체협약(2022) 기관근무 관련 조항",
+          "교육공무직 보수·복무 업무편람 중 기관근무자 부분"
+        ],
+        grantRules:{
+          firstYearMax:11,
+          defaultDaysAfter1Y:26
+        },
+        desc:"기관근무 상시근로자(회계연도 기준)용 예시 프로필입니다. 실제 숫자는 grantRules를 단협·지침에 맞게 수정하세요."
       },
+
+      // 4) 통상임금 지침 반영형 – 연차일수는 단협/법령대로, 통상임금은 지침에 맞춰 따로 산정해 가져오는 가정
+      gw_wage_guideline:{
+        id:"gw_wage_guideline",
+        name:"[예시] 통상임금 노사지도 지침 반영형(단가만 직접입력)",
+        yearBase:"MAR",
+        yearBaseLabel:"3월 1일 기준 (학교 학년도형, 예시)",
+        grantType:"external_days", // 연차일수는 이미 계산돼서 내려왔다고 가정
+        daysRounding:{
+          step:0.5,
+          mode:"floor",
+          label:"0.5일 단위 버림(예시)"
+        },
+        moneyRounding:{
+          step:10,
+          mode:"round",
+          label:"10원 단위 반올림 (예시: 지침상 권고형)"
+        },
+        docs:[
+          "교육공무직 등 통상임금 산정 변경사항 안내",
+          "통상임금 노사지도 지침(250206 개정판)",
+          "2025년 교육공무직 보수표(학교/기관근무자 통상임금 반영)"
+        ],
+        desc:"연차일수는 이미 다른 모듈에서 계산해 온다고 보고, 여기서는 통상임금 지침에 따라 산정한 단가를 입력해서 수당만 계산하는 모드입니다."
+      },
+
+      // 5) 커스텀 – 완전 수동
       custom:{
         id:"custom",
         name:"[커스텀] 사용자가 직접 규정 적용",
         yearBase:"MANUAL",
         yearBaseLabel:"기준일 수동 입력",
-        grantType:"manual_only", // 연차일수는 전적으로 사용자가 입력
-        rounding:{
-          step:null,       // 화면에서 customRoundingStep 사용
-          mode:null,       // 화면에서 customRoundingMode 사용
+        grantType:"manual_only",
+        daysRounding:{
+          step:null,
+          mode:null,
+          label:"연차일수 소수점은 사용자가 직접 판단"
+        },
+        moneyRounding:{
+          step:null,
+          mode:null,
           label:"화면에서 선택한 커스텀 절사 규칙 적용"
         },
-        desc:"연차일수는 직접 입력하고, 절사 규칙도 하단에서 직접 지정해서 사용하는 모드입니다."
+        docs:[
+          "기관별 특수한 단협, 훈령, 내부 기준 등",
+          "시험용, 과거년도 복기용 등"
+        ],
+        desc:"연차일수는 직접 입력하고, 금액 절사 규칙도 화면에서 직접 지정해서 사용하는 완전 수동 모드입니다."
       }
     };
 
@@ -565,12 +674,12 @@
       return n.toLocaleString("ko-KR",{maximumFractionDigits:2});
     }
 
-    // 절사·반올림 처리
-    function roundByRule(amount, profile){
+    // 금액 절사·반올림 처리
+    function roundMoneyByRule(amount, profile){
       if(amount === null || amount === undefined || isNaN(amount)) return 0;
 
-      let step = profile.rounding.step;
-      let mode = profile.rounding.mode;
+      let step = profile.moneyRounding.step;
+      let mode = profile.moneyRounding.mode;
 
       // 커스텀 규정이면 화면에서 입력받은 걸 사용
       if(profile.id === "custom"){
@@ -726,8 +835,9 @@
     function onProfileChange(){
       const profile = getSelectedProfile();
       document.getElementById("profileYearBaseView").textContent = profile.yearBaseLabel;
-      document.getElementById("profileRoundingView").textContent = profile.rounding.label;
+      document.getElementById("profileRoundingView").textContent = profile.moneyRounding.label;
       document.getElementById("profileDescView").textContent = profile.desc;
+      document.getElementById("profileDocsView").textContent = profile.docs.join(" / ");
 
       // yearBase에 따라 기준일 자동 세팅 (JAN/MAR)
       const baseDateInput = document.getElementById("baseDate");
@@ -799,7 +909,7 @@
         if(fullYears < 1){
           // 1년 미만: 월 개근일수만큼, 최대 11일
           suggestedDays = Math.min(fullMonths,11);
-          desc = `법정 기본형: 1년 미만 근로, 월 개근 ${fullMonths}개월 → ${suggestedDays}일 (예시: 최대 11일)`;
+          desc = `법정 기본형: 1년 미만 근로, 월 개근 ${fullMonths}개월 → ${suggestedDays}일 (최대 11일 예시)`;
         }else{
           if(rate !== null && rate < 80){
             suggestedDays = fullMonths;
@@ -810,38 +920,40 @@
             desc = `법정 기본형: 근속 ${fullYears}년 / 출근율 ${rate===null ? "미입력" : rate.toFixed(1)+"%"} → 기본 15일 + 가산 ${extra}일 = ${suggestedDays}일 (예시)`;
           }
         }
-      }else if(profile.grantType === "gw_cba_like"){
+      }else if(profile.grantType === "gw_cba_school" || profile.grantType === "gw_cba_institute"){
         // 강원 교육공무직 단협 흉내낸 샘플 로직
-        // 👉 실제 조항에 맞게 이 구간별 로직을 수정하면 됨
+        const firstYearMax = profile.grantRules.firstYearMax || 11;
+        const defaultAfter = profile.grantRules.defaultDaysAfter1Y || 26;
+
         if(fullYears < 1){
-          // 1년 미만: 월 개근 1일씩, 최대 11일
-          suggestedDays = Math.min(fullMonths,11);
-          desc = `강원 CBA 샘플: 1년 미만, 월 개근 ${fullMonths}개월 → ${suggestedDays}일 (최대 11일 예시)`;
+          suggestedDays = Math.min(fullMonths, firstYearMax);
+          desc = `강원 CBA 샘플: 1년 미만, 월 개근 ${fullMonths}개월 → ${suggestedDays}일 (최대 ${firstYearMax}일 예시)`;
         }else{
-          // 예시: 1년 이상 출근율 80% 이상이면 26일 고정, 80% 미만이면 월개근수
           if(rate !== null && rate >= 80){
-            // 근속에 따라 25~26일 등으로 조정하고 싶으면 여기서 분기
-            suggestedDays = 26; // ★ 여기를 실제 단체협약 연차일수로 수정
-            desc = `강원 CBA 샘플: 근속 ${fullYears}년 / 출근율 ${rate.toFixed(1)}% → ${suggestedDays}일 (샘플 값)`;
+            suggestedDays = defaultAfter;
+            desc = `강원 CBA 샘플: 근속 ${fullYears}년 / 출근율 ${rate.toFixed(1)}% → ${suggestedDays}일 (단협 기준값을 grantRules에 입력 필요)`;
           }else if(rate !== null){
             suggestedDays = fullMonths;
             desc = `강원 CBA 샘플: 출근율 ${rate.toFixed(1)}% (80% 미만) → 월 개근 ${fullMonths}개월 = ${suggestedDays}일로 단순 적용`;
           }else{
-            suggestedDays = 26;
-            desc = `강원 CBA 샘플: 출근율 미입력 → 일단 ${suggestedDays}일로 가정 (샘플 값)`;
+            suggestedDays = defaultAfter;
+            desc = `강원 CBA 샘플: 출근율 미입력 → 일단 ${suggestedDays}일로 가정 (grantRules.defaultDaysAfter1Y 사용)`;
           }
         }
+      }else if(profile.grantType === "external_days"){
+        // 외부 모듈에서 이미 연차일수를 계산해 왔다고 가정 – 추천값 대신 안내만
+        desc = "통상임금 지침 반영형입니다. 연차일수는 다른 모듈에서 계산해 온 값을 그대로 [실제 부여 연차일수]에 입력해주세요.";
+        suggestedDays = null;
       }else if(profile.grantType === "manual_only"){
-        // 커스텀: 추천값은 그냥 안내 문구만
+        // 커스텀: 추천값은 안내 문구만
         desc = "커스텀 규정 모드입니다. 실제 부여 연차일수는 아래 칸에 직접 입력하세요.";
         suggestedDays = null;
       }
 
-      if(profile.grantType === "manual_only"){
+      if(profile.grantType === "manual_only" || profile.grantType === "external_days"){
         suggestedView.textContent = desc;
       }else{
-        suggestedView.textContent = `${desc}`;
-        // 실제 부여일수 입력란에 기본값으로 반영 (비어있을 때만)
+        suggestedView.textContent = desc;
         const grantedInput = document.getElementById("grantedDays");
         if(!grantedInput.value && suggestedDays !== null){
           grantedInput.value = suggestedDays;
@@ -884,7 +996,7 @@
       }
 
       const payoutRaw = unused * dailyWage;
-      const payoutRounded = roundByRule(payoutRaw, profile);
+      const payoutRounded = roundMoneyByRule(payoutRaw, profile);
 
       // 결과 표시
       document.getElementById("resProfileName").textContent = profile.name;
@@ -911,7 +1023,7 @@
           roundingTag.textContent = "원단위 (절사 없음)";
         }
       }else{
-        roundingTag.textContent = profile.rounding.label;
+        roundingTag.textContent = profile.moneyRounding.label;
       }
     }
 
